@@ -46,7 +46,15 @@ music-player-tui/
 - 本体: [ungive/mediaremote-adapter](https://github.com/ungive/mediaremote-adapter)
 - このプロジェクトでは、[lvncer/home](https://github.com/lvncer/home) の Electron 用に vendored していた `mediaremote-adapter` をコピーして利用している（同じ仕組みで macOS 26 でも動く）。
 
+## サムネイル（アートワーク）の表示
+
+- adapter の `get` は `artworkData`（base64）と `artworkMimeType` を返す場合がある。
+- **Kitty**・**WezTerm**・**Warp** など、Kitty graphics protocol に対応したターミナルでは、再生中曲のアートワークをインライン画像として表示する（`TERM` に `kitty` / `wezterm` / `warp` が含まれるときのみ有効）。
+- サムネがない、または表示できない場合は「Artwork: -」と表示する。
+- プロトコルは PNG を前提（`f=100`）。JPEG も試すが、ターミナルによっては表示されないことがある。画像が表示されない場合は `MUSIC_PLAYER_TUI_ARTWORK=1` で強制的に画像出力を試せる（`TERM` 判定をスキップ）。
+
 ## 参考
 
 - [LyricFever #94 — MRMediaRemoteGetNowPlayingInfo return nil in latest MacOS](https://github.com/aviwad/LyricFever/issues/94)（entitlement と adapter の説明）
 - [mediaremote-adapter README](https://github.com/ungive/mediaremote-adapter#readme)
+- [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/)

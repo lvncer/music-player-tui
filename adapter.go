@@ -1,6 +1,3 @@
-// Package main: mediaremote-adapter (perl + framework) for macOS 15.4+ Now Playing.
-// See https://github.com/ungive/mediaremote-adapter
-
 package main
 
 import (
@@ -23,10 +20,10 @@ const (
 type adapterNowPlaying struct {
 	Title           *string  `json:"title"`
 	Artist          *string  `json:"artist"`
-	Album           *string  `json:"album"`
 	Duration        *float64 `json:"duration"`
 	ElapsedTime     *float64 `json:"elapsedTime"`
 	ElapsedTimeNow  *float64 `json:"elapsedTimeNow"` // present when "get --now" is used
+	Playing         *bool    `json:"playing"`        // true = playing, false = paused
 }
 
 // adapterStreamLine is one line from "stream" (full object or diff).
@@ -102,12 +99,6 @@ func adapterGet() (model, error) {
 	if m.artist == "" {
 		m.artist = "-"
 	}
-	if raw.Album != nil {
-		m.album = *raw.Album
-	}
-	if m.album == "" {
-		m.album = "-"
-	}
 	if raw.Duration != nil {
 		m.duration = *raw.Duration
 	}
@@ -115,6 +106,9 @@ func adapterGet() (model, error) {
 		m.position = *raw.ElapsedTimeNow
 	} else if raw.ElapsedTime != nil {
 		m.position = *raw.ElapsedTime
+	}
+	if raw.Playing != nil {
+		m.playing = *raw.Playing
 	}
 	return m, nil
 }
@@ -187,15 +181,12 @@ func adapterStartStream(debounceMs int, onLine func(model)) (stop func(), err er
 					continue
 				}
 				p := event.Payload
-				m := model{title: "-", artist: "-", album: "-"}
+				m := model{title: "-", artist: "-"}
 				if p.Title != nil {
 					m.title = *p.Title
 				}
 				if p.Artist != nil {
 					m.artist = *p.Artist
-				}
-				if p.Album != nil {
-					m.album = *p.Album
 				}
 				if p.Duration != nil {
 					m.duration = *p.Duration

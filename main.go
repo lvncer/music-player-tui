@@ -21,7 +21,6 @@ type tickMsg struct{}
 
 var changeChan = make(chan struct{})
 
-// useAdapter is set at startup; when true, we use mediaremote-adapter (perl) instead of C MediaRemote.
 var useAdapter bool
 
 //export mr_on_change
@@ -30,31 +29,29 @@ func mr_on_change() {
 }
 
 type model struct {
-	title    string
-	artist   string
-	album    string
-	position float64
-	duration float64
+	title        string
+	artist       string
+	position     float64
+	duration     float64
+	playing      bool   // true = playing, false = paused/unknown
 }
 
 func fetch() model {
 	if useAdapter {
 		m, err := adapterGet()
 		if err != nil {
-			return model{title: "-", artist: "-", album: "-"}
+			return model{title: "-", artist: "-"}
 		}
 		return m
 	}
 	C.mr_refresh()
 	title := C.GoString(C.mr_title())
 	artist := C.GoString(C.mr_artist())
-	album := C.GoString(C.mr_album())
 	pos := float64(C.mr_position())
 	dur := float64(C.mr_duration())
 	return model{
 		title:    title,
 		artist:   artist,
-		album:    album,
 		position: pos,
 		duration: dur,
 	}
@@ -158,31 +155,57 @@ func progress(pos, dur float64) string {
 }
 
 func (m model) View() string {
+	playIcon := "⏸"  // pause icon when playing
+	if !m.playing {
+		playIcon = "▶" // play icon when paused
+	}
 
-	return fmt.Sprintf(
+	body := fmt.Sprintf(
 		`
-now playing
+%s
+%s
 
-Artist: %s
-Title : %s
-Album : %s
+%s
+%s          %s
 
-%s [%s] %s
-
-space: play/pause
-n: next   p: prev
-q: quit
+      ◀◀  %s  ▶▶
 `,
-		m.artist,
 		m.title,
-		m.album,
-		formatTime(m.position),
+		m.artist,
 		progress(m.position, m.duration),
+		formatTime(m.position),
 		formatTime(m.duration),
+		playIcon,
 	)
+	return body
 }
 
+const helpText = `music-player-tui — Now Playing TUI for macOS
+
+USAGE
+  music-player-tui [options]
+
+OPTIONS
+  -h, --help    show this help
+
+KEYS (in app)
+  Space   play/pause
+  n       next track
+  p       previous track
+  q       quit
+
+On macOS 15.4+, place the mediaremote-adapter folder next to the binary
+to read now playing info. See docs/now-playing-macos.md.
+`
+
 func main() {
+	for _, a := range os.Args[1:] {
+		if a == "-h" || a == "--help" {
+			fmt.Print(helpText)
+			os.Exit(0)
+		}
+	}
+
 	useAdapter = AdapterAvailable()
 
 	p := tea.NewProgram(fetch())
